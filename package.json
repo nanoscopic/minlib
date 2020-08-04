@@ -1,0 +1,23 @@
+{
+  "name": "minlib",
+  "author": "David Helkowski",
+  "version": "1.0.0",
+  "license": "MIT",
+  "description": "Minimal DOM Library",
+  "main": "minlib.js",
+  "keywords": [
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nanoscopic/minlib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nanoscopic/minlib/issues"
+  },
+  "scripts": {
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

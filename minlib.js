@@ -78,4 +78,6 @@ MinLib.prototype = {
     for( var i = 0; i < 20; i++ ) jsf();
     return jsf;
   }
-}
+};
+
+export default MinLib;
