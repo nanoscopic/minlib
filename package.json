@@ -1,7 +1,7 @@
 {
   "name": "minlib",
   "author": "David Helkowski",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "license": "MIT",
   "description": "Minimal DOM Library",
   "main": "minlib.js",

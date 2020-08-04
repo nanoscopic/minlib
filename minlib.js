@@ -37,6 +37,10 @@ MinLib.prototype = {
     return document.getElementById(i);
   },
   app: function(a,b) {
+    if(b.length) {
+      for( var i=0;i<b.length;i++ ) a.appendChild( b[i] );
+      return;
+    }
     a.appendChild(b);
   },
   nbr: function(c) {
