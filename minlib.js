@@ -1,87 +1,102 @@
-Function.prototype.bind = Function.prototype.bind || function() {
-  var f = this, a = [];
-  for( var i = 0; i < arguments.length; i++ ) a.push( arguments[i] );
-  var ob = a.shift();
-  return function() {
-    var a2 = [];
-    for( var i = 0; i < arguments.length; i++ ) a2.push( arguments[i] );
-    return f.apply( ob, a.concat( a2 ) );
-  }
-}
-var Class = {
-  create: function() {
-    return function() {
-      this.init.apply(this, arguments);
-    }
-  }
-};
-var MinLib = Class.create();
+const Class = () => function (...a) { this.init(...a); };
+var MinLib = Class();
+const frompx = v => parseFloat(v) || 0;
 MinLib.prototype = {
   init: function() {
   },
-  nclass: function() {
-    return Class.create();
-  },
-  nel: function(t) {
-    return document.createElement(t);
-  },
+  nclass: Class,
+  nel: document.createElement.bind(document),
   ndiv: function(c) {
-    var d = this.nel('div');
+    const d = this.nel('div');
     d.className = c;
     return d;
   },
-  ntext: function(t) {
-    return document.createTextNode(t);
+  ntext: document.createTextNode.bind(document),
+  ntextplus: function(str) {
+      const d = this.mk('div', { innerHTML: str } );
+      return this.ntext( d.textContent );
   },
-  gel: function(i) {
-    return document.getElementById(i);
-  },
+  gel: i => document.getElementById(i),
   app: function(a,b) {
-    if( Array.isArray(b) ) {
-      for( var i=0;i<b.length;i++ ) a.appendChild( b[i] );
-      return;
-    }
-    a.appendChild(b);
+    Array.isArray(b) ? b.forEach(el => a.appendChild(el)) : a.appendChild(b);
   },
   nbr: function(c) {
-    var b = document.createElement('br');
+    const b = this.nel('br');
     if(c) b.clear = c;
     return b;
   },
-  clear: function(e) {
-    if(!e) return;
-    while(e.firstChild) e.removeChild(e.firstChild);
+  clear: e => {
+    if(e) while(e.firstChild) e.firstChild.remove();
   },
-  gbyclass: function(c, root) {
-    root = root || document.body;
-    //if(root.getElementsByClassName) return root.getElementsByClassName(c);
-    c = ' ' + c + ' ';
-    var a = root.getElementsByTagName('*'),res = [];
-    for( var i = 0; i < a.length; i++ )
-      if( (' ' + a[i].className + ' ').indexOf(c) != -1 ) res.push( a[i] );
-    return res;
+  gbyclass: function(c, root = document.body) {
+    return [...root.getElementsByClassName(c)];
   },
   delallclass: function(c) {
-    var a = this.gbyclass(c);
-    for( var i=0;i<a.length;i++ ) a[i].parentNode.removeChild(a[i]);
+    for( let el of this.gbyclass(c) ) el.remove();
   },
-  posof: function(e) {
-    var r = e.getBoundingClientRect();
-    return [ r.left, r.top + window.scrollY ];
+  posof: e => {
+    const { left, top, width, height } = e.getBoundingClientRect();
+    return [ left + scrollX, top + scrollY, width, height ];
   },
-  JSF: function(seed) {
+  posofInner: el => {
+    const { left, top, width, height } = el.getBoundingClientRect();
+    const s = getComputedStyle(el);
+    const l = frompx(s.borderLeftWidth  ) + frompx(s.paddingLeft  ),
+          r = frompx(s.borderRightWidth ) + frompx(s.paddingRight ),
+          t = frompx(s.borderTopWidth   ) + frompx(s.paddingTop   ),
+          b = frompx(s.borderBottomWidth) + frompx(s.paddingBottom);
+    return [left + l + scrollX, top  + t + scrollY, width - l - r, height - t  - b];
+  },
+  frag: () => document.createDocumentFragment(),
+  on: (el,ev,fn) => el.addEventListener(ev,fn),
+  mk: (tag, props = {}) => {
+    const el = this.nel(tag);
+    ml.forOwn(props, (k, v) => {
+      if      (k === 'style') ml.forOwn( v, (s, sv) => { el.style[s] = sv;       });
+      else if (k === 'attr' ) ml.forOwn( v, (a, av) => { el.setAttribute(a, av); });
+      else el[k] = v;
+    });
+    return el;
+  },
+  forOwn: (o, fn) => {
+    for(const k in o) if( o.hasOwnProperty(k) ) fn(k, o[k]);
+  },
+  setAttrs: (el, obj) => {
+    ml.forOwn( obj, (k, v) => { el.setAttribute(k, v); } );
+  },
+  setStyles: (el, obj) => {
+    ml.forOwn( obj, (k, v) => { el.style[k] = v; } );
+  },
+  JSF: seed => {
     function jsf() {
-      var e = s[0] - ( s[1]<<27 | s[1]>>>5 );
+      const e = s[0] - ( s[1]<<27 | s[1]>>>5 );
       s[0] = s[1] ^ ( s[2]<<17 | s[2]>>>15 ),
       s[1] = s[2] + s[3],
       s[2] = s[3] + e, s[3] = s[0] + e;
       return ( s[3] >>> 0 ) / 4294967296; // 2^32
     }
     seed >>>= 0;
-    var s = [0xf1ea5eed, seed, seed, seed];
-    for( var i = 0; i < 20; i++ ) jsf();
+    const s = [0xf1ea5eed, seed, seed, seed];
+    for( let i = 0; i < 20; i++ ) jsf();
     return jsf;
+  },
+  xhr: function(url, data, callback, ctx) {//callback
+    const req = new XMLHttpRequest();
+    req.open('POST', url);
+    req.setRequestHeader('Content-Type', 'application/json');
+    req.onreadystatechange = function() {
+      if( req.readyState === XMLHttpRequest.DONE ) {
+        const text = req.responseText;
+        const cb = ctx ? callback.bind(ctx) : callback;
+        
+        if( req.status !== 200 ) { cb(text, new Error('HTTP ' + req.status + ': ' + req.statusText)); return; }
+        if( text[0] !== '{'    ) { cb(text, new Error('Invalid JSON: does not start with {')); return; }
+        
+        try       { cb( JSON.parse(text), null ); }
+        catch (e) { cb( text, e ); }
+      }
+    };
+    req.send(JSON.stringify(data));
   }
 };
-
 export default MinLib;
